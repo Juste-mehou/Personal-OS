@@ -4915,7 +4915,8 @@ function AddEntryPanel({
   dateKey,
   expenseTax,
   defaultCatId,
-  defaultCategoryId
+  defaultCategoryId,
+  catNotes
 }) {
   const [personNote, setPersonNote] = useState('');
   const [categoryId, setCategoryId] = useState(defaultCategoryId !== undefined ? (defaultCategoryId || '') : (defaultCatId || ''));
@@ -5415,7 +5416,9 @@ function AddEntryPanel({
     style: {flex:1, minWidth:0, padding:'6px 8px', borderRadius:'var(--rad)', border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:12}
   }, /*#__PURE__*/React.createElement("option",{value:''}, 'Uncategorized'), _catLeaves.map(function(o){ return /*#__PURE__*/React.createElement("option",{key:o.id,value:o.id}, o.label); })), previewEachCost != null && /*#__PURE__*/React.createElement("span", {
     style: { fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap' }
-  }, '\u2192 $' + previewEachCost.toFixed(2) + ' each')), /*#__PURE__*/React.createElement("div", {
+  }, '\u2192 $' + previewEachCost.toFixed(2) + ' each')), (hasCats && categoryId && catNotes && catNotes[categoryId]) ? /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 10, color: 'var(--text3)', marginTop: -2, marginBottom: 8, lineHeight: 1.4 }
+  }, '\uD83D\uDCDD ' + catNotes[categoryId].text) : null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 5,
@@ -5510,7 +5513,9 @@ function AddEntryPanel({
 }
 
 // ── TODAY VIEW ────────────────────────────────────────────────
-function CategoryManager({ onClose, expenseTax, onSetExpenseTax, defaultCatId, onSetDefault, onSetCatBudget, onMoveBudgets, resolveBudget, periodKey, periodLabel }) {
+function CategoryManager({ onClose, expenseTax, onSetExpenseTax, defaultCatId, onSetDefault, onSetCatBudget, onMoveBudgets, resolveBudget, periodKey, periodLabel, catNotes, onSetCatNote }) {
+  const [noteId, setNoteId] = useState(null);
+  const [noteText, setNoteText] = useState('');
   const [collapsed, setCollapsed] = useState({});
   const [addingUnder, setAddingUnder] = useState(null); // parentId, or '__root__'
   const [newLabel, setNewLabel] = useState('');
@@ -5577,8 +5582,17 @@ function CategoryManager({ onClose, expenseTax, onSetExpenseTax, defaultCatId, o
         /*#__PURE__*/React.createElement("button", { onClick:function(){ beginEdit(n); }, title:'Rename / recolor', style: ctrlBtn }, '\u270e'),
         /*#__PURE__*/React.createElement("button", { onClick:function(){ onSetExpenseTax('Reorder', reorderSibling(expenseTax, n.id, -1)); }, title:'Move up', style: ctrlBtn }, '\u2191'),
         /*#__PURE__*/React.createElement("button", { onClick:function(){ onSetExpenseTax('Reorder', reorderSibling(expenseTax, n.id, 1)); }, title:'Move down', style: ctrlBtn }, '\u2193'),
+        /*#__PURE__*/React.createElement("button", { onClick:function(){ if (noteId === n.id) { setNoteId(null); } else { setNoteId(n.id); setNoteText((catNotes && catNotes[n.id] && catNotes[n.id].text) || ''); } }, title:'Definition note', style:{ ...ctrlBtn, color: (catNotes && catNotes[n.id]) ? S : 'var(--text3)' } }, '\uD83D\uDCDD'),
         /*#__PURE__*/React.createElement("button", { onClick:function(){ archive(n.id); }, title:'Archive', style: ctrlBtn }, '\uD83D\uDDD1')
       ),
+      noteId === n.id ? /*#__PURE__*/React.createElement("div", { style:{ paddingLeft: depth * 16 + 19, paddingBottom:8 } },
+        /*#__PURE__*/React.createElement("div", { style:{ fontSize:10, color:'var(--text3)', marginBottom:4 } }, 'What belongs in "' + n.label + '"'),
+        /*#__PURE__*/React.createElement("textarea", { value:noteText, autoFocus:true, onChange:function(e){ setNoteText(e.target.value); }, onKeyDown:function(e){ if(e.key==='Escape') setNoteId(null); }, rows:2, placeholder:'Definition / what counts here', style:{ width:'100%', boxSizing:'border-box', padding:'6px 8px', borderRadius:'var(--rad)', border:'1px solid var(--border2)', background:'var(--bg)', color:'var(--text)', fontSize:12, fontFamily:'inherit', lineHeight:1.4, resize:'vertical' } }),
+        /*#__PURE__*/React.createElement("div", { style:{ display:'flex', gap:6, marginTop:4 } },
+          /*#__PURE__*/React.createElement("button", { onClick:function(){ onSetCatNote(n.id, noteText); setNoteId(null); }, style:{ padding:'4px 10px', borderRadius:'var(--rad)', border:'none', background:S, color:'#fff', fontSize:11, fontWeight:600, cursor:'pointer' } }, 'Save'),
+          /*#__PURE__*/React.createElement("button", { onClick:function(){ setNoteId(null); }, style:{ padding:'4px 8px', borderRadius:'var(--rad)', border:'1px solid var(--border2)', background:'none', color:'var(--text2)', fontSize:11, cursor:'pointer' } }, 'Cancel')
+        )
+      ) : null,
       editId === n.id ? /*#__PURE__*/React.createElement("div", { style:{ paddingLeft: depth * 16 + 19, paddingBottom:8 } },
         /*#__PURE__*/React.createElement("div", { style:{ display:'flex', gap:6 } },
           /*#__PURE__*/React.createElement("input", { value:editLabel, autoFocus:true, onChange:function(e){ setEditLabel(e.target.value); }, onKeyDown:function(e){ if(e.key==='Enter') saveEdit(); if(e.key==='Escape') setEditId(null); }, style:{ flex:1, padding:'5px 8px', borderRadius:'var(--rad)', border:'1px solid var(--border2)', background:'var(--bg)', color:'var(--text)', fontSize:12 } }),
@@ -5670,8 +5684,21 @@ function TimerBar({ timer, onStop, onPause, onResume, onToggleTick, onStartStand
     /*#__PURE__*/React.createElement("button", { onClick: function(){ setOpen(false); }, style: iconBtn }, '\u2715')
   );
 }
-function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onOpenCategories, expenseTax, resolveBudget, onSetEntryCategory }) {
+// Monthly categories allocate all of a month's expenses to their assigned half.
+// Half-month categories retain the half of the actual transaction date.
+function budgetCategoryInPeriod(n, periodKey) {
+  return !n || n.cadence !== 'month' || (n.showHalf || 'H1') === periodKey.slice(-2);
+}
+function expenseBudgetPeriod(dk, category) {
+  return dk.slice(0, 7) + '-' + (category && category.cadence === 'month'
+    ? (category.showHalf || 'H1') : (+dk.slice(8, 10) <= 15 ? 'H1' : 'H2'));
+}
+function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onOpenCategories, expenseTax, resolveBudget, onSetEntryCategory, catNotes, catPeriodNotes, onAddCatPeriodNote, onEditCatPeriodNote, onDeleteCatPeriodNote }) {
   const [expLeaves, setExpLeaves] = useState({});
+  const [cmtLeaf, setCmtLeaf] = useState(null);
+  const [cmtText, setCmtText] = useState('');
+  const [cmtEdit, setCmtEdit] = useState(null);
+  const [cmtEditText, setCmtEditText] = useState('');
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState('');
   const [showExp, setShowExp] = useState(false);
@@ -5691,23 +5718,20 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
   useEffect(function(){ setEditing(false); }, [key]);
   var curHalf = isH1 ? 'H1' : 'H2';
   var monthStartKey = y + '-' + mm + '-01';
-  // Which leaves are monthly, and which half they show in.
-  var monthlyMap = {};
-  (function walk(nodes){ (nodes || []).forEach(function(n){ if (!n.children || !n.children.length) { if (n.cadence === 'month') monthlyMap[n.id] = n.showHalf || 'H1'; } else walk(n.children); }); })(expenseTax || []);
-  // Spent so far, attributing monthly categories to their chosen half over the whole
-  // month, and everything else to this half.
+  var expenseCategoryMap = {};
+  (function walk(nodes){ (nodes || []).forEach(function(n){ expenseCategoryMap[n.id] = n; walk(n.children); }); })(expenseTax || []);
+  // The dashboard is spending through the selected date; the modal shows the full period.
   var spent = 0;
   Object.keys(allEntries || {}).forEach(function(dk){
+    if (dk > dateKey) return;
     (allEntries[dk] || []).forEach(function(e){
       if (e.cost == null || e.cost <= 0) return;
-      var mh = e.categoryId ? monthlyMap[e.categoryId] : undefined;
-      if (mh !== undefined) { if (mh === curHalf && dk >= monthStartKey && dk <= dateKey) spent += e.cost; }
-      else { if (dk >= startKey && dk <= dateKey) spent += e.cost; }
+      if (expenseBudgetPeriod(dk, expenseCategoryMap[e.categoryId]) === key) spent += e.cost;
     });
   });
   // Total budget = fortnightly leaves for this half + monthly leaves whose chosen half is this one.
   var leafBudgetTotal = 0, anyLeafBudget = false;
-  (function walk(nodes){ (nodes || []).forEach(function(n){ if (n.archived) return; if (!n.children || !n.children.length) { if (n.cadence === 'month' && (n.showHalf || 'H1') !== curHalf) return; var v = resolveBudget ? resolveBudget(n.id, key) : null; if (v != null) { leafBudgetTotal += v; anyLeafBudget = true; } } else walk(n.children); }); })(expenseTax || []);
+  (function walk(nodes){ (nodes || []).forEach(function(n){ if (n.archived) return; if (!n.children || !n.children.length) { if (!budgetCategoryInPeriod(n, key)) return; var v = resolveBudget ? resolveBudget(n.id, key) : null; if (v != null) { leafBudgetTotal += v; anyLeafBudget = true; } } else walk(n.children); }); })(expenseTax || []);
   const budget = anyLeafBudget ? leafBudgetTotal : budgets[key];
   var prevKey;
   if (!isH1) prevKey = y + '-' + mm + '-H1';
@@ -5740,9 +5764,9 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
     var eLabel = eMon + ' \u00b7 ' + (ep.isH1 ? '1\u201315' : '16\u2013' + eLast);
     var total = 0, spentByCat = {}, linesByCat = {}, uncatLines = [];
     Object.keys(allEntries || {}).sort().forEach(function(dk){
-      if (dk >= eStartKey && dk <= eEndKey) {
+      if (dk.slice(0, 7) === eKey.slice(0, 7)) {
         (allEntries[dk] || []).forEach(function(e){
-          if (e.cost != null && e.cost > 0) {
+          if (e.cost != null && e.cost > 0 && expenseBudgetPeriod(dk, expenseCategoryMap[e.categoryId]) === eKey) {
             total += e.cost;
             var n = findNode(taxonomy, e.activityId);
             var line = { dk: dk, entryId: e.id, label: n ? n.label : (e.activityId || '?'), note: e.note, cost: e.cost, categoryId: e.categoryId || null };
@@ -5755,7 +5779,7 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
     var leafOpts = [];
     (function walk(nodes, prefix){ (nodes || []).forEach(function(n){ if (n.archived) return; var lbl = prefix ? prefix + ' \u203a ' + n.label : n.label; if (!n.children || !n.children.length) leafOpts.push({ id: n.id, label: lbl }); else walk(n.children, lbl); }); })(expenseTax || [], '');
     var eBudgetLeafSum = 0, anyEBudget = false;
-    (function walk(nodes){ (nodes || []).forEach(function(n){ if (n.archived) return; if (!n.children || !n.children.length) { var v = resolveBudget ? resolveBudget(n.id, eKey) : null; if (v != null) { eBudgetLeafSum += v; anyEBudget = true; } } else walk(n.children); }); })(expenseTax || []);
+    (function walk(nodes){ (nodes || []).forEach(function(n){ if (n.archived) return; if (!n.children || !n.children.length) { if (!budgetCategoryInPeriod(n, eKey)) return; var v = resolveBudget ? resolveBudget(n.id, eKey) : null; if (v != null) { eBudgetLeafSum += v; anyEBudget = true; } } else walk(n.children); }); })(expenseTax || []);
     var eBudget = anyEBudget ? eBudgetLeafSum : budgets[eKey];
     var goPrev = function(){ if (ep.isH1) { var p = new Date(ep.y, ep.mo - 1, 1); setEp({ y:p.getFullYear(), mo:p.getMonth(), isH1:false }); } else setEp({ y:ep.y, mo:ep.mo, isH1:true }); };
     var goNext = function(){ if (ep.isH1) setEp({ y:ep.y, mo:ep.mo, isH1:false }); else { var nx = new Date(ep.y, ep.mo + 1, 1); setEp({ y:nx.getFullYear(), mo:nx.getMonth(), isH1:true }); } };
@@ -5780,15 +5804,49 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
         /*#__PURE__*/React.createElement("div", { style:{ overflowY:'auto', flex:1 } }, (function(){
           var toggle = function(id){ setExpLeaves(function(m){ var n = Object.assign({}, m); n[id] = !n[id]; return n; }); };
           var nodeSpent = function(n){ if (!n.children || !n.children.length) return spentByCat[n.id] || 0; return n.children.reduce(function(s, c){ return c.archived ? s : s + nodeSpent(c); }, 0); };
-          var nodeBudget = function(n){ if (!n.children || !n.children.length) { var v = resolveBudget ? resolveBudget(n.id, eKey) : null; return v || 0; } return n.children.reduce(function(s, c){ return c.archived ? s : s + nodeBudget(c); }, 0); };
+          var nodeBudget = function(n){ if (!budgetCategoryInPeriod(n, eKey)) return 0; if (!n.children || !n.children.length) { var v = resolveBudget ? resolveBudget(n.id, eKey) : null; return v || 0; } return n.children.reduce(function(s, c){ return c.archived ? s : s + nodeBudget(c); }, 0); };
           var recatSelect = function(line){ return /*#__PURE__*/React.createElement("select", { value: line.categoryId || '', onChange: function(ev){ onSetEntryCategory && onSetEntryCategory(line.dk, line.entryId, ev.target.value || null); }, title:'Recategorize', style:{ fontSize:10, padding:'1px 2px', borderRadius:4, border:'1px solid var(--border2)', background:'var(--bg)', color:'var(--text3)', maxWidth:92 } }, /*#__PURE__*/React.createElement("option",{value:''},'Uncat.'), leafOpts.map(function(o){ return /*#__PURE__*/React.createElement("option",{key:o.id,value:o.id}, o.label); })); };
           var renderLine = function(line){ return /*#__PURE__*/React.createElement("div", { key:line.entryId, style:{ display:'flex', alignItems:'center', gap:6, padding:'3px 0 3px 22px' } },
             /*#__PURE__*/React.createElement("span", { style:{ flex:1, fontSize:11, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, fmtDay(line.dk) + ' \u00b7 ' + line.label + (line.note ? ' \u2014 ' + line.note : '')),
             /*#__PURE__*/React.createElement("span", { style:{ fontSize:11, fontWeight:600, color:'var(--text2)' } }, fmt(line.cost)),
             recatSelect(line)
           ); };
+          var cmtTA = { width:'100%', boxSizing:'border-box', padding:'5px 7px', borderRadius:'var(--rad)', border:'1px solid var(--border2)', background:'var(--bg)', color:'var(--text)', fontSize:11, fontFamily:'inherit', lineHeight:1.4, resize:'vertical' };
+          var cmtSaveBtn = { padding:'3px 10px', borderRadius:'var(--rad)', border:'none', background:S, color:'#fff', fontSize:10, fontWeight:600, cursor:'pointer' };
+          var cmtCancelBtn = { padding:'3px 8px', borderRadius:'var(--rad)', border:'1px solid var(--border2)', background:'none', color:'var(--text2)', fontSize:10, cursor:'pointer' };
+          var cmtIcon = { background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:10, padding:'0 2px' };
+          var commentaryBlock = function(n){
+            var pk = (n.cadence === 'month') ? eKey.slice(0, 7) : eKey;
+            var notes = (catPeriodNotes && catPeriodNotes[n.id] && catPeriodNotes[n.id][pk]) || [];
+            var def = catNotes && catNotes[n.id];
+            return /*#__PURE__*/React.createElement("div", { key:'cmt-' + n.id, style:{ paddingLeft:22, marginTop:4, marginBottom:6 } },
+              def ? /*#__PURE__*/React.createElement("div", { style:{ fontSize:10, color:'var(--text3)', fontStyle:'italic', marginBottom:4 } }, '\uD83D\uDCDD ' + def.text) : null,
+              notes.map(function(nt){
+                if (cmtEdit === nt.id) return /*#__PURE__*/React.createElement("div", { key:nt.id, style:{ marginBottom:4 } },
+                  /*#__PURE__*/React.createElement("textarea", { value:cmtEditText, autoFocus:true, onChange:function(e){ setCmtEditText(e.target.value); }, rows:2, style:cmtTA }),
+                  /*#__PURE__*/React.createElement("div", { style:{ display:'flex', gap:6, marginTop:3 } },
+                    /*#__PURE__*/React.createElement("button", { onClick:function(){ if (cmtEditText.trim()) onEditCatPeriodNote(n.id, pk, nt.id, cmtEditText); setCmtEdit(null); }, style:cmtSaveBtn }, 'Save'),
+                    /*#__PURE__*/React.createElement("button", { onClick:function(){ setCmtEdit(null); }, style:cmtCancelBtn }, 'Cancel')
+                  )
+                );
+                return /*#__PURE__*/React.createElement("div", { key:nt.id, style:{ display:'flex', gap:6, alignItems:'flex-start', padding:'2px 0' } },
+                  /*#__PURE__*/React.createElement("span", { style:{ fontSize:9, color:'var(--text3)', whiteSpace:'nowrap', paddingTop:1 } }, (function(){ try { return new Date(nt.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch(e){ return ''; } }())),
+                  /*#__PURE__*/React.createElement("span", { style:{ flex:1, fontSize:11, color:'var(--text2)', whiteSpace:'pre-wrap', lineHeight:1.4 } }, nt.text),
+                  /*#__PURE__*/React.createElement("button", { onClick:function(){ setCmtEdit(nt.id); setCmtEditText(nt.text); }, title:'Edit', style:cmtIcon }, '\u270e'),
+                  /*#__PURE__*/React.createElement("button", { onClick:function(){ onDeleteCatPeriodNote(n.id, pk, nt.id); }, title:'Delete', style:cmtIcon }, '\uD83D\uDDD1')
+                );
+              }),
+              cmtLeaf === n.id ? /*#__PURE__*/React.createElement("div", { style:{ marginTop:4 } },
+                /*#__PURE__*/React.createElement("textarea", { value:cmtText, autoFocus:true, onChange:function(e){ setCmtText(e.target.value); }, rows:2, placeholder:'Note for ' + (n.cadence === 'month' ? 'this month' : 'this half') + '\u2026', style:cmtTA }),
+                /*#__PURE__*/React.createElement("div", { style:{ display:'flex', gap:6, marginTop:3 } },
+                  /*#__PURE__*/React.createElement("button", { onClick:function(){ if (cmtText.trim()) onAddCatPeriodNote(n.id, pk, cmtText); setCmtLeaf(null); setCmtText(''); }, style:cmtSaveBtn }, 'Add'),
+                  /*#__PURE__*/React.createElement("button", { onClick:function(){ setCmtLeaf(null); setCmtText(''); }, style:cmtCancelBtn }, 'Cancel')
+                )
+              ) : /*#__PURE__*/React.createElement("button", { onClick:function(){ setCmtLeaf(n.id); setCmtText(''); }, style:{ background:'none', border:'none', color:'var(--text3)', fontSize:10, cursor:'pointer', padding:'2px 0' } }, '+ note for this period')
+            );
+          };
           var renderNode = function(n, depth){
-            if (n.archived) return null;
+            if (n.archived || !budgetCategoryInPeriod(n, eKey)) return null;
             var leaf = !n.children || !n.children.length;
             var sp = nodeSpent(n), bud = nodeBudget(n);
             if (sp === 0 && bud === 0) return null;
@@ -5797,15 +5855,16 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
               var lines = linesByCat[n.id] || [];
               var open = !!expLeaves[n.id];
               var pctW = bud > 0 ? Math.max(0, Math.min(100, sp / bud * 100)) : (sp > 0 ? 100 : 0);
+              var hasNote = (catNotes && catNotes[n.id]) || (catPeriodNotes && catPeriodNotes[n.id]);
               return /*#__PURE__*/React.createElement("div", { key:n.id, style:{ marginBottom:6, paddingLeft: depth * 12 } },
-                /*#__PURE__*/React.createElement("div", { onClick: lines.length ? function(){ toggle(n.id); } : null, style:{ display:'flex', alignItems:'center', gap:6, cursor: lines.length ? 'pointer' : 'default' } },
+                /*#__PURE__*/React.createElement("div", { onClick: function(){ toggle(n.id); }, title: (catNotes && catNotes[n.id]) ? catNotes[n.id].text : null, style:{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' } },
                   /*#__PURE__*/React.createElement("span", { style:{ width:9, height:9, borderRadius:2, background:n.color || 'var(--border2)', flexShrink:0 } }),
-                  /*#__PURE__*/React.createElement("span", { style:{ flex:1, fontSize:12, color:'var(--text)' } }, n.label, lines.length ? /*#__PURE__*/React.createElement("span",{style:{color:'var(--text3)',fontSize:10}}, ' ' + (open ? '\u25be' : '\u25b8')) : null),
+                  /*#__PURE__*/React.createElement("span", { style:{ flex:1, fontSize:12, color:'var(--text)' } }, n.label, (catNotes && catNotes[n.id]) ? /*#__PURE__*/React.createElement("span",{style:{color:'var(--text3)',fontSize:9}}, ' \uD83D\uDCDD') : null, /*#__PURE__*/React.createElement("span",{style:{color:'var(--text3)',fontSize:10}}, ' ' + (open ? '\u25be' : '\u25b8'))),
                   /*#__PURE__*/React.createElement("span", { style:{ fontSize:11, fontWeight:600, color: over ? 'var(--red-tc)' : 'var(--text2)' } }, fmt(sp)),
                   /*#__PURE__*/React.createElement("span", { style:{ fontSize:10, color:'var(--text3)' } }, bud > 0 ? '/ ' + fmt(bud) : '')
                 ),
                 bud > 0 ? /*#__PURE__*/React.createElement("div", { style:{ height:4, borderRadius:99, background:'var(--bg3)', marginTop:3, overflow:'hidden' } }, /*#__PURE__*/React.createElement("div", { style:{ height:'100%', width:pctW + '%', background: over ? 'var(--red-tc)' : hexToRgba(n.color || '#1a9070', 0.9) } })) : null,
-                open ? lines.map(renderLine) : null
+                open ? [].concat(lines.map(renderLine)).concat([commentaryBlock(n)]) : null
               );
             }
             var pOpen = expLeaves[n.id] !== true; // parents default open; toggling collapses
@@ -5888,6 +5947,82 @@ function BudgetWidget({ dateKey, budgets, onSetBudget, allEntries, taxonomy, onO
   }
   return /*#__PURE__*/React.createElement("div", null, content, expModal);
 }
+// External calendar reference: no imports into the activity log.
+const DEFAULT_REFERENCE_CALENDARS = [{"id": "google", "name": "Google", "url": "https://calendar.google.com/calendar/embed?src=mehoujuste%40gmail.com&ctz=America%2FNew_York"}, {"id": "outlook1", "name": "Outlook 1", "url": "https://outlook.office365.com/owa/calendar/8135d190662244e98a7fe415148fa0ce@dukes.jmu.edu/d15ac7c4558a4349840efc593880c9f416365483114154876718/calendar.html"}, {"id": "outlook2", "name": "Outlook 2", "url": "https://outlook.office365.com/owa/calendar/50edc7243ac1430888c5d6770e4543ea@jmu.edu/744052c928ee4014a2e7ffd1bfc3e6d57035311065213394931/calendar.html"}];
+function normalizeCalendarLink(input) {
+  var raw = String(input || '').trim().replace(/\\(?=[<>:])/g, '');
+  var match = /<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i.exec(raw);
+  if (match) raw = match[1].replace(/&amp;/g, '&');
+  var u;
+  try { u = new URL(raw); } catch(e) { throw new Error('Paste a Google embed code or an Outlook HTML calendar link.'); }
+  if (u.protocol !== 'https:' || u.username || u.password) throw new Error('Use an HTTPS calendar link.');
+  if (u.hostname === 'calendar.google.com' && u.pathname === '/calendar/embed') return u.href;
+  if ((u.hostname === 'outlook.office365.com' || u.hostname === 'outlook.live.com' || u.hostname === 'outlook.office.com') && /\/calendar\.html$/.test(u.pathname)) return u.href;
+  throw new Error('Use Google Calendar embed code or an Outlook published HTML link, not an ICS feed.');
+}
+function CalendarReference({ calendars, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [name, setName] = useState('');
+  const [link, setLink] = useState('');
+  const [error, setError] = useState('');
+  const [mode, setMode] = useState('WEEK');
+  const [reload, setReload] = useState(0);
+  var current = calendars.find(function(c){ return c.id === active; }) || calendars[0];
+  var frameURL = current ? current.url : '';
+  var google = current && new URL(current.url).hostname === 'calendar.google.com';
+  if (google) { var u = new URL(frameURL); u.searchParams.set('mode', mode); u.searchParams.set('ctz','America/New_York'); frameURL = u.href; }
+  var button = {padding:'5px 9px',borderRadius:6,border:'1px solid var(--border2)',background:'var(--bg)',color:'var(--text)',fontSize:11,cursor:'pointer'};
+  var field = {width:'100%',boxSizing:'border-box',padding:8,borderRadius:6,border:'1px solid var(--border2)',background:'var(--bg)',color:'var(--text)',fontSize:12};
+  var startEdit = function(c){ setEditId(c ? c.id : null); setName(c ? c.name : ''); setLink(c ? c.url : ''); setError(''); setEditing(true); setOpen(true); };
+  var save = function(){
+    try {
+      if (!name.trim()) throw new Error('Enter a calendar name.');
+      var url = normalizeCalendarLink(link), id = editId || ('calendar-' + Date.now());
+      var item = {id:id,name:name.trim(),url:url};
+      onChange(editId ? calendars.map(function(c){return c.id === editId ? item : c;}) : calendars.concat([item]));
+      setActive(id); setEditing(false); setError('');
+    } catch(e){ setError(e.message); }
+  };
+  return React.createElement('section',{style:{margin:'10px 0',padding:12,border:'1px solid var(--border)',borderRadius:10,background:'var(--bg2)'}},
+    React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+      React.createElement('button',{onClick:function(){setOpen(!open);},'aria-expanded':open,style:{...button,flex:1,textAlign:'left',fontWeight:600}},(open ? '▾ ' : '▸ ') + 'Other calendars'),
+      React.createElement('button',{onClick:function(){startEdit(null);},style:button},'+ Add calendar')),
+    open && React.createElement('div',null,
+      React.createElement('p',{style:{fontSize:11,color:'var(--text3)',margin:'9px 0'}},'Review external commitments alongside your plan. Add anything you need to your OS manually.'),
+      React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},calendars.map(function(c){return React.createElement('button',{key:c.id,onClick:function(){setActive(c.id);setEditing(false);},style:{...button,fontWeight:current && current.id === c.id ? 700 : 400}},c.name);})),
+      editing ? React.createElement('div',{style:{display:'grid',gap:8,marginBottom:10}},
+        React.createElement('label',null,'Calendar name',React.createElement('input',{value:name,onChange:function(e){setName(e.target.value);},style:field})),
+        React.createElement('label',null,'Embed code or HTML calendar link',React.createElement('textarea',{value:link,onChange:function(e){setLink(e.target.value);},rows:3,style:field,placeholder:'Paste Google iframe code or Outlook HTML link'})),
+        error && React.createElement('div',{role:'alert',style:{fontSize:12,color:'var(--red-tc)'}},error),
+        React.createElement('div',{style:{display:'flex',gap:6}},React.createElement('button',{onClick:save,style:button},'Save'),React.createElement('button',{onClick:function(){setEditing(false);},style:button},'Cancel'))
+      ) : current ? React.createElement('div',null,
+        React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+          React.createElement('button',{onClick:function(){startEdit(current);},style:button},'Edit link / name'),
+          React.createElement('button',{onClick:function(){if(window.confirm('Remove ' + current.name + ' from this panel?')) onChange(calendars.filter(function(c){return c.id !== current.id;}));},style:button},'Remove'),
+          React.createElement('button',{onClick:function(){setReload(reload+1);},style:button},'Refresh'),
+          React.createElement('a',{href:current.url,target:'_blank',rel:'noopener noreferrer',style:button},'Open calendar ↗'),
+          google && React.createElement('select',{value:mode,onChange:function(e){setMode(e.target.value);},'aria-label':'Google calendar view',style:button},React.createElement('option',{value:'WEEK'},'Week'),React.createElement('option',{value:'AGENDA'},'Agenda'),React.createElement('option',{value:'MONTH'},'Month'))),
+        React.createElement('iframe',{key:current.id + '-' + reload,src:frameURL,title:current.name + ' calendar',loading:'lazy',referrerPolicy:'no-referrer',style:{width:'100%',height:'min(650px, 75vh)',minHeight:400,border:0,borderRadius:6,background:'#fff'}}),
+        React.createElement('p',{style:{fontSize:11,color:'var(--text3)'}},'If the calendar is blank or asks you to sign in, use Open calendar. Embedded access depends on the provider and browser.')
+      ) : React.createElement('p',{style:{fontSize:12}},'Add a calendar to begin.')
+    ));
+}
+
+function normalizeTripMapURL(value) {
+  var text = String(value || '').trim();
+  if (!text) return '';
+  var u;
+  try { u = new URL(text); } catch(e) { throw new Error('Enter the full published map URL, beginning with https://.'); }
+  if (!['https:', 'http:'].includes(u.protocol) || u.username || u.password) throw new Error('Use an HTTP or HTTPS website link.');
+  return u.href;
+}
+function safeTripMapURL(value) { try { return normalizeTripMapURL(value); } catch(e) { return ''; } }
+function stayForTravelDate(stays, date) {
+  return (stays || []).filter(function(s){return s.startDate <= date && date <= s.endDate;}).sort(function(a,b){return b.startDate.localeCompare(a.startDate);})[0] || null;
+}
 function TodayView({
   taxonomy,
   entries,
@@ -5917,6 +6052,7 @@ function TodayView({
   onClearAutoOpen,
   onMoveEntry,
   travelPlace,
+  travelStay,
   onOpenTravel,
   onResolvePending,
   onAddPersonNote,
@@ -5928,6 +6064,11 @@ function TodayView({
   defaultCatId,
   resolveBudget,
   onSetEntryCategory,
+  catNotes,
+  catPeriodNotes,
+  onAddCatPeriodNote,
+  onEditCatPeriodNote,
+  onDeleteCatPeriodNote,
   allEntries
 }) {
   const [addOpen, setAddOpen] = useState(false);
@@ -6229,6 +6370,7 @@ function TodayView({
         dateKey: selectedDate,
         expenseTax: expenseTax,
         defaultCatId: defaultCatId,
+        catNotes: catNotes,
         onSave: function(id, m, nt, pl, st, cst, lk, linkedIds, linkedWeights, pNote, cat) {
           var ok = onAdd(id, m, nt, pl, st, cst, lk, false, linkedIds, linkedWeights, pos, pNote, cat);
           if (ok !== false) { setAddOpen(false); setInsertIdx(null); }
@@ -6265,7 +6407,7 @@ function TodayView({
     onClick: onOpenTravel,
     title: 'Travel \u2014 ' + travelPlace.name,
     style: { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 99, cursor: 'pointer', color: 'var(--text)', background: hexToRgba(travelPlace.color, 0.22), border: '1px solid ' + hexToRgba(travelPlace.color, 0.5) }
-  }, '\uD83D\uDCCD', travelPlace.name)), /*#__PURE__*/React.createElement("button", {
+  }, '\uD83D\uDCCD', travelPlace.name), travelStay && safeTripMapURL(travelStay.mapUrl) ? React.createElement('a', {href:safeTripMapURL(travelStay.mapUrl), target:'_blank', rel:'noopener noreferrer', title:'Open trip map', style:{fontSize:11,color:'var(--text)',padding:'2px 8px',borderRadius:99,border:'1px solid var(--border2)',textDecoration:'none'}}, (travelStay.mapLabel || 'Open trip map') + ' ↗') : null), /*#__PURE__*/React.createElement("button", {
     onClick: () => adj(1),
     style: {
       ...btnSt(false),
@@ -6308,7 +6450,7 @@ function TodayView({
         flexShrink: 0
       }
     }) : null;
-  })), /*#__PURE__*/React.createElement(BudgetWidget, { dateKey: selectedDate, budgets: budgets || {}, onSetBudget: onSetBudget, allEntries: allEntries || {}, taxonomy: taxonomy, onOpenCategories: onOpenCategories, expenseTax: expenseTax || [], resolveBudget: resolveBudget, onSetEntryCategory: onSetEntryCategory }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(BudgetWidget, { dateKey: selectedDate, budgets: budgets || {}, onSetBudget: onSetBudget, allEntries: allEntries || {}, taxonomy: taxonomy, onOpenCategories: onOpenCategories, expenseTax: expenseTax || [], resolveBudget: resolveBudget, onSetEntryCategory: onSetEntryCategory, catNotes: catNotes, catPeriodNotes: catPeriodNotes, onAddCatPeriodNote: onAddCatPeriodNote, onEditCatPeriodNote: onEditCatPeriodNote, onDeleteCatPeriodNote: onDeleteCatPeriodNote }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 6,
@@ -7201,6 +7343,7 @@ function TodayView({
       defaultLocked: editingEntry.locked,
       expenseTax: expenseTax,
       defaultCatId: defaultCatId,
+      catNotes: catNotes,
       defaultCategoryId: editingEntry.categoryId || null,
       dateKey: selectedDate,
       inferredStartTime: (function() {
@@ -7222,6 +7365,7 @@ function TodayView({
     dateKey: selectedDate,
     expenseTax: expenseTax,
     defaultCatId: defaultCatId,
+    catNotes: catNotes,
     onSave: (id, m, nt, pl, st, cst, lk, linkedIds, linkedWeights, pNote, cat) => {
       var ok = onAdd(id, m, nt, pl, st, cst, lk, !!prefilledActivityId, linkedIds, linkedWeights, undefined, pNote, cat);
       if (ok === false) return;
@@ -8460,12 +8604,113 @@ function RecurPromptModal({ prompt, taxonomy, onResolve }) {
   );
 }
 
-function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSetStays }) {
+// Visits annotate existing entries; they never alter the activity ledger.
+function visitIntervals(v, entries, dayStart) {
+  var linked = computeTimeline(entries || [], dayStart).filter(function(t){return (v.entryIds || []).includes(t.entry.id);});
+  var intervals = v.timeMode === 'custom' ? (v.intervals || []) : linked.map(function(t){return {start:t.startMin,end:t.endMin};});
+  if (v.timeMode === 'date') intervals = [];
+  return {linked:linked,intervals:intervals};
+}
+function visitWarnings(v, entries, stays, places, dayStart) {
+  var data = visitIntervals(v, entries, dayStart), warnings = [];
+  if ((v.entryIds || []).some(function(id){return !data.linked.some(function(t){return t.entry.id === id;});})) warnings.push('A linked activity was deleted or moved to another date. Relink it to restore its time.');
+  if (v.timeMode !== 'date' && !data.linked.length) warnings.push('This timed visit has no available linked activities.');
+  var coverage = data.linked.map(function(t){return {start:t.startMin,end:t.endMin};}).sort(function(a,b){return a.start-b.start;});
+  data.intervals.forEach(function(i){
+    var cursor = i.start;
+    if (i.end == null || i.end === i.start) {
+      if (!coverage.some(function(c){return c.start <= i.start && i.start <= c.end;})) warnings.push('Visit time ' + visitClock(i.start) + ' falls outside the linked activity times.');
+    } else {
+      coverage.forEach(function(c){if(c.start <= cursor && c.end > cursor) cursor=c.end;});
+      if (cursor < i.end) warnings.push('Visit interval ' + visitClock(i.start) + '–' + visitClock(i.end) + ' includes time outside the linked activities.');
+    }
+  });
+  var stay = (stays || []).find(function(s){return s.id === v.stayId;});
+  if (v.stayId && !stay) warnings.push('The associated stay was removed.');
+  if (stay && (v.date < stay.startDate || v.date > stay.endDate)) warnings.push('This visit date is outside its associated stay.');
+  if (!(places || []).some(function(p){return p.id === v.placeId;})) warnings.push('The visited place was removed.');
+  return Array.from(new Set(warnings));
+}
+function visitClock(m) { return fmtClock(m) + (m >= 1440 ? ' (+' + Math.floor(m/1440) + ' day)' : ''); }
+function visitInputTime(m) {return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');}
+function visitParseTime(s) {var m=/^(\d{1,3}):([0-5]\d)$/.exec(s || '');return m ? +m[1]*60 + +m[2] : null;}
+function VisitPanel({ visits, places, stays, allEntries, taxonomy, selectedDate, dayStart, onSetVisits, onSetPlaces, manager }) {
+  const [visibility,setVisibility]=useState(function(){return LS.get('visits-visibility') || {};});
+  var travelDay = (stays || []).some(function(s){return s.startDate <= selectedDate && selectedDate <= s.endDate;});
+  var hidden = !manager && (Object.prototype.hasOwnProperty.call(visibility, selectedDate) ? visibility[selectedDate] : !travelDay);
+  const [open,setOpen]=useState(!!manager);
+  const [editing,setEditing]=useState(false);
+  const [draft,setDraft]=useState(null);
+  const [newPlace,setNewPlace]=useState('');
+  const [error,setError]=useState('');
+  const [rangeText,setRangeText]=useState([]);
+  const [filter,setFilter]=useState('all');
+  var toggleHidden=function(){var next=Object.assign({},visibility,{[selectedDate]:!hidden});setVisibility(next);LS.set('visits-visibility',next);if(!hidden){setEditing(false);setOpen(false);}};
+  var h=React.createElement;
+  var btn={padding:'5px 8px',border:'1px solid var(--border2)',borderRadius:6,background:'var(--bg)',color:'var(--text)',fontSize:11,cursor:'pointer'};
+  var field={padding:'6px 8px',border:'1px solid var(--border2)',borderRadius:6,background:'var(--bg)',color:'var(--text)',fontSize:12,maxWidth:'100%',boxSizing:'border-box'};
+  var placeName=function(id){var p=places.find(function(p){return p.id===id;});return p?p.name:'Removed place';};
+  var update=function(patch){setDraft(Object.assign({},draft,patch));setError('');};
+  var begin=function(v){
+    var stay=stays.filter(function(s){return s.startDate<=selectedDate && selectedDate<=s.endDate;}).sort(function(a,b){return b.startDate.localeCompare(a.startDate);})[0];
+    var next=v ? Object.assign({},v,{entryIds:(v.entryIds || []).slice()}) : {id:'visit-'+Date.now(),date:selectedDate,placeId:'',stayId:stay?stay.id:null,entryIds:[],timeMode:'date',intervals:[],note:''};
+    setDraft(next);setRangeText((next.intervals || []).map(function(i){return {start:visitInputTime(i.start),end:i.end==null?'':visitInputTime(i.end)};}));setNewPlace('');setError('');setEditing(true);setOpen(true);
+  };
+  var custom=function(){var data=visitIntervals(Object.assign({},draft,{timeMode:'activity'}),allEntries[draft.date] || [],dayStart);setRangeText(data.intervals.map(function(i){return {start:visitInputTime(i.start),end:visitInputTime(i.end)};}));update({timeMode:'custom'});};
+  var preview=draft && Object.assign({},draft,{intervals:rangeText.map(function(r){return {start:visitParseTime(r.start),end:r.end ? visitParseTime(r.end):null};}).filter(function(i){return i.start!=null;})});
+  var save=function(){
+    if(!draft.date){setError('Choose a date.');return;}
+    if(!draft.placeId && !newPlace.trim()){setError('Choose or name a place.');return;}
+    var valid=(allEntries[draft.date] || []).filter(function(e){return draft.entryIds.includes(e.id);});
+    if(draft.timeMode!=='date' && !valid.length){setError('Timed visits require at least one existing activity.');return;}
+    if(draft.timeMode==='custom' && (!rangeText.length || rangeText.some(function(r){var a=visitParseTime(r.start),b=r.end?visitParseTime(r.end):null;return a==null || (r.end && b==null) || (b!=null && b<a);}))) {setError('Use HH:MM. End must be at or after start; use 24:30 for 12:30 AM on the next day. Leave end blank for a single time.');return;}
+    var pid=draft.placeId;
+    if(newPlace.trim()){pid='pl-'+Date.now();onSetPlaces('Add visited place',places.concat([{id:pid,name:newPlace.trim(),color:PLACE_PALETTE[0].color}]));}
+    var item=Object.assign({},preview,{placeId:pid,entryIds:valid.map(function(e){return e.id;}),intervals:draft.timeMode==='custom'?preview.intervals:[]});
+    onSetVisits('Save visit',visits.some(function(v){return v.id===item.id;})?visits.map(function(v){return v.id===item.id?item:v;}):visits.concat([item]));setEditing(false);
+  };
+  var shown=visits.filter(function(v){return manager ? filter==='all' || v.stayId===filter || (filter==='none'&&!v.stayId) : v.date===selectedDate;}).slice().sort(function(a,b){var ai=visitIntervals(a,allEntries[a.date],dayStart).intervals[0],bi=visitIntervals(b,allEntries[b.date],dayStart).intervals[0];return a.date.localeCompare(b.date) || (ai ? ai.start : 0)-(bi ? bi.start : 0) || a.id.localeCompare(b.id);});
+  if(hidden) return h('div',{style:{marginBottom:10}},h('button',{onClick:toggleHidden,title:'Show visits','aria-label':'Show visits',style:{background:'none',border:'none',color:'var(--text3)',opacity:0.35,cursor:'pointer',fontSize:14,padding:'0 0 2px',letterSpacing:2}},'···'));
+  return h('section',{style:{margin:'12px 0',padding:10,border:'1px solid var(--border)',borderRadius:10}},
+    h('div',{style:{display:'flex',gap:6}},h('button',{style:{...btn,flex:1,textAlign:'left'},onClick:function(){setOpen(!open);},'aria-expanded':open},(open?'▾ ':'▸ ')+'Visits · '+shown.length+(manager?'':' · '+selectedDate)),h('button',{style:btn,onClick:function(){begin(null);}},'+ Visit'),!manager && h('button',{onClick:toggleHidden,title:'Hide visits','aria-label':'Hide visits',style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:11,padding:0,opacity:0.7}},'🙈')),
+    open && h('div',null,
+      manager && h('select',{style:{...field,marginTop:8,width:'100%'},value:filter,onChange:function(e){setFilter(e.target.value);},'aria-label':'Filter visits by stay'},h('option',{value:'all'},'All stays and visits'),h('option',{value:'none'},'Visits without a stay'),stays.map(function(s){return h('option',{key:s.id,value:s.id},placeName(s.placeId)+' · '+s.startDate+'–'+s.endDate);})),
+      editing && draft && h('div',{style:{display:'grid',gap:8,margin:'10px 0'}},
+        h('label',null,'Visit date ',h('input',{type:'date',value:draft.date,style:field,onChange:function(e){update({date:e.target.value,entryIds:[],timeMode:'date',intervals:[]});setRangeText([]);}})),
+        h('label',null,'Visited place ',h('select',{value:draft.placeId,style:field,onChange:function(e){update({placeId:e.target.value});setNewPlace('');}},h('option',{value:''},'New place…'),places.map(function(p){return h('option',{key:p.id,value:p.id},p.name);}))),
+        !draft.placeId && h('input',{style:field,value:newPlace,onChange:function(e){setNewPlace(e.target.value);},placeholder:'New visited place name','aria-label':'New visited place name'}),
+        h('label',null,'Associated stay ',h('select',{style:field,value:draft.stayId || '',onChange:function(e){update({stayId:e.target.value || null});}},h('option',{value:''},'No stay / local outing'),stays.map(function(s){return h('option',{key:s.id,value:s.id},placeName(s.placeId)+' · '+s.startDate+'–'+s.endDate);}))),
+        h('div',null,h('div',{style:{fontSize:12,fontWeight:600,marginBottom:5}},'Link activities (optional for date-only visits)'),
+          h('div',{style:{maxHeight:220,overflowY:'auto'}},computeTimeline(allEntries[draft.date] || [],dayStart).map(function(t){var n=findNode(taxonomy,t.entry.activityId);return h('label',{key:t.entry.id,style:{display:'flex',gap:6,alignItems:'baseline',fontSize:11,padding:'4px 0'}},h('input',{type:'checkbox',checked:draft.entryIds.includes(t.entry.id),onChange:function(e){var ids=e.target.checked?draft.entryIds.concat([t.entry.id]):draft.entryIds.filter(function(id){return id!==t.entry.id;});update({entryIds:ids,timeMode:ids.length?(draft.timeMode==='date'?'activity':draft.timeMode):'date'});}}),visitClock(t.startMin)+'–'+visitClock(t.endMin)+' · '+(n?n.label:t.entry.activityId)+(t.entry.note?' · '+t.entry.note:''));})),
+          !(allEntries[draft.date] || []).length && h('p',{style:{fontSize:11}},'No activities recorded for this date. You can save a date-only visit.')),
+        h('label',null,'Visit timing ',h('select',{style:field,value:draft.timeMode,onChange:function(e){if(e.target.value==='custom')custom();else update({timeMode:e.target.value});}},h('option',{value:'date'},'Date only'),h('option',{value:'activity',disabled:!draft.entryIds.length},'Follow activity times'),h('option',{value:'custom',disabled:!draft.entryIds.length},'Custom visit times'))),
+        draft.timeMode==='activity' && h('div',{style:{fontSize:11}},visitIntervals(draft,allEntries[draft.date],dayStart).intervals.map(function(i){return visitClock(i.start)+'–'+visitClock(i.end);}).join(' · ')),
+        draft.timeMode==='custom' && h('div',null,rangeText.map(function(r,i){return h('div',{key:i,style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:5}},h('input',{style:{...field,width:90},value:r.start,placeholder:'HH:MM','aria-label':'Visit start '+(i+1),onChange:function(e){setRangeText(rangeText.map(function(x,j){return i===j?Object.assign({},x,{start:e.target.value}):x;}));}}),h('input',{style:{...field,width:90},value:r.end,placeholder:'End (optional)','aria-label':'Visit end '+(i+1),onChange:function(e){setRangeText(rangeText.map(function(x,j){return i===j?Object.assign({},x,{end:e.target.value}):x;}));}}),h('button',{style:btn,onClick:function(){setRangeText(rangeText.filter(function(x,j){return i!==j;}));}},'Remove interval'));}),h('button',{style:btn,onClick:function(){setRangeText(rangeText.concat([{start:'',end:''}]));}},'+ Interval'),h('button',{style:btn,onClick:function(){update({timeMode:'activity',intervals:[]});}},'Reset to activity times'),h('p',{style:{fontSize:10,color:'var(--text3)'}},'HH:MM; for times after midnight use 24:30, 25:00, etc. Leave end empty for a point in time.')),
+        h('textarea',{value:draft.note || '',onChange:function(e){update({note:e.target.value});},style:field,rows:2,placeholder:'Visit notes','aria-label':'Visit notes'}),
+        preview && visitWarnings(preview,allEntries[draft.date] || [],stays,places.concat(newPlace.trim()?[{id:draft.placeId}]:[]),dayStart).map(function(w){return h('div',{key:w,style:{fontSize:11,color:'var(--text2)'}},'⚠ '+w+' You can still save.');}),
+        error && h('div',{role:'alert',style:{fontSize:12,color:'var(--red-tc)'}},error),
+        h('div',{style:{display:'flex',gap:6}},h('button',{style:btn,onClick:save},'Save visit'),h('button',{style:btn,onClick:function(){setEditing(false);}},'Cancel'))),
+      shown.map(function(v){var data=visitIntervals(v,allEntries[v.date] || [],dayStart);return h('div',{key:v.id,style:{padding:'8px 0',borderTop:'1px solid var(--border)',fontSize:12}},
+        h('div',{style:{display:'flex',gap:6,alignItems:'center'}},h('strong',{style:{flex:1}},placeName(v.placeId)),h('button',{style:btn,onClick:function(){begin(v);}},'Edit'),h('button',{style:btn,onClick:function(){if(window.confirm('Delete this visit? Activity entries will stay unchanged.'))onSetVisits('Delete visit',visits.filter(function(x){return x.id!==v.id;}));}},'Delete')),
+        h('div',{style:{fontSize:11,color:'var(--text3)'}},v.date+' · '+(v.timeMode==='date'?'Date only':data.intervals.map(function(i){return visitClock(i.start)+(i.end!=null && i.end!==i.start?'–'+visitClock(i.end):'');}).join(' · '))+(v.timeMode==='custom'?' · custom':'')),
+        v.note && h('div',{style:{whiteSpace:'pre-wrap',marginTop:4}},v.note),
+        data.linked.length>0 && h('div',{style:{fontSize:11,marginTop:4}},'Linked: '+data.linked.map(function(t){var n=findNode(taxonomy,t.entry.activityId);return (n?n.label:t.entry.activityId)+' ('+visitClock(t.startMin)+'–'+visitClock(t.endMin)+')';}).join(' · ')),
+        visitWarnings(v,allEntries[v.date] || [],stays,places,dayStart).map(function(w){return h('div',{key:w,style:{fontSize:11,marginTop:3}},'⚠ '+w);})
+      );}),
+      !shown.length && !editing && h('p',{style:{fontSize:11,color:'var(--text3)'}},'No visits recorded. Add a place and date, then optionally link activities.')));
+}
+
+function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSetStays, visits, allEntries, taxonomy, dayStart, onSetVisits }) {
   const [newPlaceName, setNewPlaceName] = useState('');
   const [newPlaceColor, setNewPlaceColor] = useState(PLACE_PALETTE[0].color);
   const [stayPlaceId, setStayPlaceId] = useState('');
   const [stayStart, setStayStart] = useState(selectedDate);
   const [stayEnd, setStayEnd] = useState(selectedDate);
+  const [stayMapUrl,setStayMapUrl] = useState('');
+  const [stayMapLabel,setStayMapLabel] = useState('');
+  const [editMapUrl,setEditMapUrl] = useState('');
+  const [editMapLabel,setEditMapLabel] = useState('');
+  const [mapError,setMapError] = useState('');
   const [editPlaceId, setEditPlaceId] = useState(null);
   const [editPlaceName, setEditPlaceName] = useState('');
   const [editPlaceColor, setEditPlaceColor] = useState(PLACE_PALETTE[0].color);
@@ -8480,13 +8725,14 @@ function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSe
     onSetPlaces('Edit place', (places || []).map(function(p){ return p.id === editPlaceId ? Object.assign({}, p, { name: nm, color: editPlaceColor }) : p; }));
     setEditPlaceId(null);
   };
-  const beginEditStay = function(s){ setEditStayId(s.id); setEditStayPlaceId(s.placeId); setEditStayStart(s.startDate); setEditStayEnd(s.endDate); };
+  const beginEditStay = function(s){ setEditStayId(s.id); setEditStayPlaceId(s.placeId); setEditStayStart(s.startDate); setEditStayEnd(s.endDate); setEditMapUrl(s.mapUrl || ''); setEditMapLabel(s.mapLabel || ''); setMapError(''); };
   const saveStay = function() {
     if (!editStayPlaceId || !editStayStart || !editStayEnd) return;
+    var url; try { url=normalizeTripMapURL(editMapUrl); } catch(e) { setMapError(e.message); return; }
     var a = editStayStart, b = editStayEnd;
     if (b < a) { var t = a; a = b; b = t; }
-    onSetStays('Edit travel', (stays || []).map(function(s){ return s.id === editStayId ? Object.assign({}, s, { placeId: editStayPlaceId, startDate: a, endDate: b }) : s; }));
-    setEditStayId(null);
+    onSetStays('Edit travel', (stays || []).map(function(s){ return s.id === editStayId ? Object.assign({}, s, { placeId: editStayPlaceId, startDate: a, endDate: b, mapUrl:url, mapLabel:editMapLabel.trim() }) : s; }));
+    setEditStayId(null); setMapError('');
   };
   const placeById = function(id){ return (places || []).find(function(p){ return p.id === id; }) || null; };
   const addPlace = function() {
@@ -8502,9 +8748,11 @@ function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSe
   };
   const addStay = function() {
     if (!stayPlaceId || !stayStart || !stayEnd) return;
+    var url; try { url=normalizeTripMapURL(stayMapUrl); } catch(e) { setMapError(e.message); return; }
     var s = stayStart, e = stayEnd;
     if (e < s) { var t = s; s = e; e = t; }
-    onSetStays('Add travel', (stays || []).concat([{ id: 'st-' + Date.now(), placeId: stayPlaceId, startDate: s, endDate: e }]));
+    onSetStays('Add travel', (stays || []).concat([{ id: 'st-' + Date.now(), placeId: stayPlaceId, startDate: s, endDate: e, mapUrl:url, mapLabel:stayMapLabel.trim() }]));
+    setStayMapUrl('');setStayMapLabel('');setMapError('');
   };
   const deleteStay = function(id) {
     onSetStays('Remove travel', (stays || []).filter(function(s){ return s.id !== id; }));
@@ -8575,6 +8823,9 @@ function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSe
             /*#__PURE__*/React.createElement("select", { value: editStayPlaceId, onChange: function(e){ setEditStayPlaceId(e.target.value); }, style: Object.assign({}, inputSt, {}) },
               (places || []).map(function(pp){ return /*#__PURE__*/React.createElement("option", { key: pp.id, value: pp.id }, pp.name); })
             ),
+            React.createElement('label', {style:{fontSize:11}}, 'Trip map URL (optional)', React.createElement('input', {type:'url',value:editMapUrl,onChange:function(e){setEditMapUrl(e.target.value);setMapError('');},placeholder:'https://your-name.github.io/your-trip/',style:{...inputSt,width:'100%',boxSizing:'border-box'},'aria-label':'Edit trip map URL'})),
+            React.createElement('label', {style:{fontSize:11}}, 'Link label (optional)', React.createElement('input', {value:editMapLabel,onChange:function(e){setEditMapLabel(e.target.value);},placeholder:'Open trip map',style:{...inputSt,width:'100%',boxSizing:'border-box'},'aria-label':'Edit trip map label'})),
+            mapError && React.createElement('div',{role:'alert',style:{fontSize:11,color:'var(--red-tc)'}},mapError),
             /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' } },
               /*#__PURE__*/React.createElement("input", { type: 'date', value: editStayStart, onChange: function(e){ setEditStayStart(e.target.value); }, style: inputSt }),
               /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: 'var(--text3)' } }, 'to'),
@@ -8584,15 +8835,21 @@ function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSe
             )
           );
         }
-        return /*#__PURE__*/React.createElement("div", { key: s.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--rad)', background: p ? hexToRgba(p.color, 0.13) : 'var(--bg)' } },
+        return /*#__PURE__*/React.createElement("div", { key: s.id, style: { display: 'flex', flexWrap:'wrap', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--rad)', background: p ? hexToRgba(p.color, 0.13) : 'var(--bg)' } },
           /*#__PURE__*/React.createElement("span", { style: { width: 10, height: 10, borderRadius: 3, background: p ? p.color : 'var(--border2)', flexShrink: 0 } }),
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: 'var(--text)', fontWeight: 500 } }, p ? p.name : 'Unknown'),
           /*#__PURE__*/React.createElement("span", { style: { flex: 1, fontSize: 11, color: 'var(--text3)' } }, fmtRange(s)),
-          /*#__PURE__*/React.createElement("button", { onClick: function(){ beginEditStay(s); }, title: 'Edit dates', style: { background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 11 } }, '\u270e'),
+          safeTripMapURL(s.mapUrl) ? React.createElement('a',{href:safeTripMapURL(s.mapUrl),target:'_blank',rel:'noopener noreferrer',title:'Open trip map',style:{fontSize:11,color:'var(--text)',textDecoration:'none',border:'1px solid var(--border2)',borderRadius:6,padding:'3px 6px',overflowWrap:'anywhere'}},(s.mapLabel || 'Open trip map')+' ↗') : null,
+          /*#__PURE__*/React.createElement("button", { onClick: function(){ beginEditStay(s); }, title: 'Edit stay / map link', style: { background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 11 } }, '\u270e'),
           /*#__PURE__*/React.createElement("button", { onClick: function(){ deleteStay(s.id); }, title: 'Delete', style: { background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 12, opacity: 0.5 } }, '\uD83D\uDDD1')
         );
       })
     ) : /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: 'var(--text3)', marginBottom: 10, fontStyle: 'italic' } }, 'No travel logged yet.'),
+    (places || []).length ? React.createElement('div',{style:{display:'grid',gap:6,marginBottom:8}},
+      React.createElement('label',{style:{fontSize:11}},'Trip map URL (optional)',React.createElement('input',{type:'url',value:stayMapUrl,onChange:function(e){setStayMapUrl(e.target.value);setMapError('');},placeholder:'https://your-name.github.io/your-trip/',style:{...inputSt,width:'100%',boxSizing:'border-box'},'aria-label':'New trip map URL'})),
+      React.createElement('label',{style:{fontSize:11}},'Link label (optional)',React.createElement('input',{value:stayMapLabel,onChange:function(e){setStayMapLabel(e.target.value);},placeholder:'Open trip map',style:{...inputSt,width:'100%',boxSizing:'border-box'},'aria-label':'New trip map label'})),
+      !editStayId && mapError && React.createElement('div',{role:'alert',style:{fontSize:11,color:'var(--red-tc)'}},mapError)
+    ) : null,
     (places || []).length ? /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' } },
       /*#__PURE__*/React.createElement("select", { value: stayPlaceId, onChange: function(e){ setStayPlaceId(e.target.value); }, style: Object.assign({}, inputSt, { flex: 1, minWidth: 100 }) },
         /*#__PURE__*/React.createElement("option", { value: '' }, 'Place\u2026'),
@@ -8602,7 +8859,8 @@ function TravelManager({ onClose, places, stays, selectedDate, onSetPlaces, onSe
       /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: 'var(--text3)' } }, 'to'),
       /*#__PURE__*/React.createElement("input", { type: 'date', value: stayEnd, onChange: function(e){ setStayEnd(e.target.value); }, style: inputSt }),
       /*#__PURE__*/React.createElement("button", { onClick: addStay, disabled: !stayPlaceId, style: { padding: '6px 12px', borderRadius: 'var(--rad)', border: 'none', background: stayPlaceId ? S : 'var(--bg3)', color: stayPlaceId ? '#fff' : 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: stayPlaceId ? 'pointer' : 'not-allowed' } }, 'Add')
-    ) : null
+    ) : null,
+    React.createElement(VisitPanel, { manager:true, visits:visits, places:places, stays:stays, allEntries:allEntries, taxonomy:taxonomy, selectedDate:selectedDate, dayStart:dayStart, onSetVisits:onSetVisits, onSetPlaces:onSetPlaces })
   ));
 }
 function App() {
@@ -8658,6 +8916,8 @@ function App() {
   // ── travel / places (a context layer over date ranges, not entries) ──
   const [places, setPlaces] = useState(() => LS.get('places-v1') || []);
   const [stays, setStays] = useState(() => LS.get('stays-v1') || []);
+  const [visits, setVisits] = useState(() => LS.get('visits-v1') || []);
+  useEffect(function(){ LS.set('visits-v1', visits); }, [visits]);
   useEffect(function(){ LS.set('places-v1', places); }, [places]);
   useEffect(function(){ LS.set('stays-v1', stays); }, [stays]);
   const [budgets, setBudgets] = useState(() => LS.get('budgets-v1') || {});
@@ -8672,9 +8932,46 @@ function App() {
   const [expenseTax, setExpenseTax] = useState(() => LS.get('expense-tax') || []);
   const [expenseDefault, setExpenseDefault] = useState(() => LS.get('expense-default') || null);
   const [catBudgets, setCatBudgets] = useState(() => LS.get('cat-budgets') || {}); // {periodKey:{leafId:amount}}
+  const [catNotes, setCatNotes] = useState(() => LS.get('cat-notes') || {}); // {catId:{text,updatedAt}} standing definitions
+  const [catPeriodNotes, setCatPeriodNotes] = useState(() => LS.get('cat-period-notes') || {}); // {catId:{periodKey:[{id,text,createdAt,updatedAt}]}}
   useEffect(function(){ LS.set('expense-tax', expenseTax); }, [expenseTax]);
   useEffect(function(){ LS.set('expense-default', expenseDefault); }, [expenseDefault]);
   useEffect(function(){ LS.set('cat-budgets', catBudgets); }, [catBudgets]);
+  useEffect(function(){ LS.set('cat-notes', catNotes); }, [catNotes]);
+  useEffect(function(){ LS.set('cat-period-notes', catPeriodNotes); }, [catPeriodNotes]);
+  const setCatNoteU = (catId, text) => {
+    var before = catNotes, next = Object.assign({}, catNotes);
+    if (text && text.trim()) next[catId] = { text: text.trim(), updatedAt: new Date().toISOString() };
+    else delete next[catId];
+    GUndo.push({ label: 'Category note', undo: function(){ setCatNotes(before); }, redo: function(){ setCatNotes(next); } });
+    setCatNotes(next);
+  };
+  const _cpnId = () => 'cp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const addCatPeriodNote = (catId, periodKey, text) => {
+    if (!text || !text.trim()) return;
+    var before = catPeriodNotes;
+    var forCat = Object.assign({}, catPeriodNotes[catId] || {});
+    forCat[periodKey] = (forCat[periodKey] || []).concat([{ id: _cpnId(), text: text.trim(), createdAt: new Date().toISOString() }]);
+    var next = Object.assign({}, catPeriodNotes, { [catId]: forCat });
+    GUndo.push({ label: 'Category commentary', undo: function(){ setCatPeriodNotes(before); }, redo: function(){ setCatPeriodNotes(next); } });
+    setCatPeriodNotes(next);
+  };
+  const editCatPeriodNote = (catId, periodKey, noteId, text) => {
+    var before = catPeriodNotes;
+    var forCat = Object.assign({}, catPeriodNotes[catId] || {});
+    forCat[periodKey] = (forCat[periodKey] || []).map(function(n){ return n.id === noteId ? Object.assign({}, n, { text: text.trim(), updatedAt: new Date().toISOString() }) : n; });
+    var next = Object.assign({}, catPeriodNotes, { [catId]: forCat });
+    GUndo.push({ label: 'Edit commentary', undo: function(){ setCatPeriodNotes(before); }, redo: function(){ setCatPeriodNotes(next); } });
+    setCatPeriodNotes(next);
+  };
+  const deleteCatPeriodNote = (catId, periodKey, noteId) => {
+    var before = catPeriodNotes;
+    var forCat = Object.assign({}, catPeriodNotes[catId] || {});
+    forCat[periodKey] = (forCat[periodKey] || []).filter(function(n){ return n.id !== noteId; });
+    var next = Object.assign({}, catPeriodNotes, { [catId]: forCat });
+    GUndo.push({ label: 'Delete commentary', undo: function(){ setCatPeriodNotes(before); }, redo: function(){ setCatPeriodNotes(next); } });
+    setCatPeriodNotes(next);
+  };
   const [showCats, setShowCats] = useState(false);
   // ── Pomodoro timer: live timer is local-only (persisted per browser); a small
   // "running" signal is synced so other devices can start their own local timer. ──
@@ -8813,6 +9110,8 @@ function App() {
   const resolveCatBudget = (leafId, periodKey) => {
     var n = catLeafInfo(leafId);
     var monthly = n && n.cadence === 'month';
+    // Resolve stored allocations in either half so the manager can edit ahead.
+    // Summary views apply budgetCategoryInPeriod separately.
     var k = monthly ? monthOf(periodKey) : periodKey, depth = 0;
     while (k && depth < 36) {
       if (catBudgets[k] && catBudgets[k][leafId] != null) return catBudgets[k][leafId];
@@ -8837,6 +9136,7 @@ function App() {
   // Undoable setters so travel edits ride the shared undo timeline.
   const setPlacesU = (label, next) => { var before = places; GUndo.push({ label: label, undo: function(){ setPlaces(before); }, redo: function(){ setPlaces(next); } }); setPlaces(next); };
   const setStaysU = (label, next) => { var before = stays; GUndo.push({ label: label, undo: function(){ setStays(before); }, redo: function(){ setStays(next); } }); setStays(next); };
+  const setVisitsU = (label, next) => { var before = visits; GUndo.push({label:label,undo:function(){setVisits(before);},redo:function(){setVisits(next);}}); setVisits(next); };
   // ── metrics state ───────────────────────────────────────────
   const [metricsTax, setMetricsTax] = useState(() => LS.get('metrics-tax') || INIT_METRICS_TAX);
   const [globalRules, setGlobalRules] = useState(function(){ return LS.get('anchor-rules') || DEFAULT_RULES; });
@@ -9098,6 +9398,11 @@ function App() {
     Object.entries(allEntries).forEach(([d, e]) => LS.set('log:' + d, e));
   }, [allEntries]);
   // ── undo / redo stacks (unified, 30 steps each) ─────────────
+  const [referenceCalendars, setReferenceCalendars] = useState(function(){
+    var saved = LS.get('reference-calendars');
+    return Array.isArray(saved) ? saved : DEFAULT_REFERENCE_CALENDARS;
+  });
+  useEffect(function(){ LS.set('reference-calendars', referenceCalendars); }, [referenceCalendars]);
   // ── Gist sync ─────────────────────────────────────────
   const [gistToken, setGistToken] = useState(function(){ try{var g=LS.get('gist-settings')||{};return g.token||'';}catch(e){return '';} });
   const [gistId, setGistId] = useState(function(){ try{var g=LS.get('gist-settings')||{};return g.id||'';}catch(e){return '';} });
@@ -9107,7 +9412,7 @@ function App() {
   const isSyncingRef = useRef(false);
   useEffect(function(){ LS.set('gist-settings',{token:gistToken,id:gistId}); },[gistToken,gistId]);
   const buildPayload = function() {
-    return JSON.stringify({version:1,exportedAt:new Date().toISOString(),taxonomy,allEntries,goals:LS.get('goals-v1')||INIT_GOALS,metricsTax,allMetrics,globalAnchors,globalRules,dailyFocus,recurRules,places,stays,budgets,nodeNotes,expenseTax,expenseDefault,catBudgets,timerSignal,settings:{dayStart}});
+    return JSON.stringify({version:1,exportedAt:new Date().toISOString(),taxonomy,allEntries,goals:LS.get('goals-v1')||INIT_GOALS,metricsTax,allMetrics,globalAnchors,globalRules,dailyFocus,recurRules,places,stays,visits,budgets,nodeNotes,expenseTax,expenseDefault,catBudgets,catNotes,catPeriodNotes,timerSignal,referenceCalendars,settings:{dayStart}});
   };
   const pushToGist = function() {
     if(!gistToken||isSyncingRef.current) return;
@@ -9138,10 +9443,12 @@ function App() {
         if(p.allMetrics) setAllMetrics(p.allMetrics); if(p.globalAnchors) setGlobalAnchors(p.globalAnchors);
         if(p.globalRules) setGlobalRules(p.globalRules); if(p.dailyFocus) setDailyFocus(p.dailyFocus);
         if(p.recurRules) setRecurRules(p.recurRules);
-        if(p.places) setPlaces(p.places); if(p.stays) setStays(p.stays);
+        if(p.places) setPlaces(p.places); if(p.stays) setStays(p.stays); if(Array.isArray(p.visits)) setVisits(p.visits);
         if(p.budgets) setBudgets(p.budgets); if(p.nodeNotes) setNodeNotes(p.nodeNotes);
         if(p.expenseTax) setExpenseTax(p.expenseTax); if(p.expenseDefault!==undefined) setExpenseDefault(p.expenseDefault); if(p.catBudgets) setCatBudgets(p.catBudgets);
+        if(p.catNotes) setCatNotes(p.catNotes); if(p.catPeriodNotes) setCatPeriodNotes(p.catPeriodNotes);
         if(p.timerSignal!==undefined) setTimerSignal(p.timerSignal);
+        if(Array.isArray(p.referenceCalendars)) setReferenceCalendars(p.referenceCalendars.filter(function(c){try{return c && typeof c.id === 'string' && typeof c.name === 'string' && normalizeCalendarLink(c.url);}catch(e){return false;}}));
         if(p.settings&&p.settings.dayStart) setDayStart(p.settings.dayStart);
         var ts=p.exportedAt||new Date().toISOString(); setLastSynced(ts);
         try{localStorage.setItem('last-synced',ts);}catch(e){}
@@ -9157,7 +9464,7 @@ function App() {
   useEffect(function(){
     if(isFirstSyncRender.current){isFirstSyncRender.current=false;return;}
     scheduleSync();
-  },[allEntries,taxonomy,metricsTax,allMetrics,dailyFocus,globalAnchors,globalRules]);
+  },[allEntries,taxonomy,metricsTax,allMetrics,dailyFocus,globalAnchors,globalRules,referenceCalendars,visits,places,stays]);
 
   const undoStack = useRef([]);
   const redoStack = useRef([]);
@@ -9747,7 +10054,8 @@ function App() {
       allEntries,
       goals: LS.get('goals-v1') || INIT_GOALS,
       metricsTax,
-      allMetrics
+      allMetrics,
+      places, stays, visits
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json'
@@ -9780,6 +10088,9 @@ function App() {
         if (data.goals) LS.set('goals-v1', data.goals);
         if (data.metricsTax) setMetricsTax(data.metricsTax);
         if (data.allMetrics) setAllMetrics(data.allMetrics);
+        if (Array.isArray(data.places)) setPlaces(data.places);
+        if (Array.isArray(data.stays)) setStays(data.stays);
+        if (Array.isArray(data.visits)) setVisits(data.visits);
         showToast('Imported data from ' + new Date(data.exportedAt).toLocaleDateString());
       } catch (err) {
         showToast('Import failed — file unreadable');
@@ -9973,7 +10284,8 @@ function App() {
     stays: stays,
     selectedDate: selDate,
     onSetPlaces: setPlacesU,
-    onSetStays: setStaysU
+    onSetStays: setStaysU,
+    visits:visits, allEntries:allEntries, taxonomy:taxonomy, dayStart:dayStart, onSetVisits:setVisitsU
   }), showCats && /*#__PURE__*/React.createElement(CategoryManager, {
     onClose: function(){ setShowCats(false); },
     expenseTax: expenseTax,
@@ -9983,6 +10295,8 @@ function App() {
     onSetCatBudget: setCatBudget,
     onMoveBudgets: moveCatBudgets,
     resolveBudget: resolveCatBudget,
+    catNotes: catNotes,
+    onSetCatNote: setCatNoteU,
     periodKey: (function(){ var d = new Date(selDate + 'T12:00:00'); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + (d.getDate() <= 15 ? 'H1' : 'H2'); }()),
     periodLabel: (function(){ var d = new Date(selDate + 'T12:00:00'); var last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); return d.toLocaleDateString('en-US',{month:'short'}) + (d.getDate() <= 15 ? ' 1\u201315' : ' 16\u2013' + last); }())
   }), /*#__PURE__*/React.createElement(TimerBar, {
@@ -10069,12 +10383,13 @@ function App() {
     prompt: recurPrompt,
     taxonomy: taxonomy,
     onResolve: recurResolve
-  }), lt === 'today' && /*#__PURE__*/React.createElement(TodayView, {
+  }), (lt === 'today' || lt === 'upcoming') && /*#__PURE__*/React.createElement(CalendarReference, { calendars: referenceCalendars, onChange: setReferenceCalendars }), (lt === 'today' || lt === 'history') && React.createElement(VisitPanel, { visits:visits, places:places, stays:stays, allEntries:allEntries, taxonomy:taxonomy, selectedDate:selDate, dayStart:dayStart, onSetVisits:setVisitsU, onSetPlaces:setPlacesU }), lt === 'today' && /*#__PURE__*/React.createElement(TodayView, {
     taxonomy: taxonomy,
     entries: allEntries[selDate] || [],
     selectedDate: selDate,
     setSelectedDate: setSelDate,
     travelPlace: placeForDate(selDate),
+    travelStay: stayForTravelDate(stays, selDate),
     onOpenTravel: function(){ setShowTravel(true); },
     budgets: budgets,
     onSetBudget: setBudget,
@@ -10083,6 +10398,11 @@ function App() {
     defaultCatId: expenseDefault,
     resolveBudget: resolveCatBudget,
     onSetEntryCategory: setEntryCategory,
+    catNotes: catNotes,
+    catPeriodNotes: catPeriodNotes,
+    onAddCatPeriodNote: addCatPeriodNote,
+    onEditCatPeriodNote: editCatPeriodNote,
+    onDeleteCatPeriodNote: deleteCatPeriodNote,
     allEntries: allEntries,
     onAdd: addEntry,
     onDelete: deleteEntry,
